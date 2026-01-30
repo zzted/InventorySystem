@@ -7,7 +7,7 @@
 #include "Widgets/Inventory/InventoryBase/Inv_InventoryBase.h"
 
 
-UInv_InventoryComponent::UInv_InventoryComponent()
+UInv_InventoryComponent::UInv_InventoryComponent() : InventoryList(this)
 {
 
 	PrimaryComponentTick.bCanEverTick = false;
@@ -48,6 +48,12 @@ void UInv_InventoryComponent::TryAddItem(UInv_ItemComponent* ItemComponent)
 void UInv_InventoryComponent::Server_AddNewItem_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount)
 {
 	UInv_InventoryItem* NewItem = InventoryList.AddEntry(ItemComponent);
+	
+	if (GetOwner()->GetNetMode() == NM_ListenServer || GetOwner()->GetNetMode() == NM_Standalone)
+	{
+		// Broadcasting when playing standalone not on client, otherwise PreReplicatedRemove will take care
+		OnItemAdded.Broadcast(NewItem);
+	}
 	
 	// Tell the Item Component to destroy its owning actor.
 }
