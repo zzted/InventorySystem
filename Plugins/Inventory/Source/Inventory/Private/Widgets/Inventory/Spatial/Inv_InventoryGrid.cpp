@@ -9,6 +9,9 @@
 #include "InventoryManagement/Components/Inv_InventoryComponent.h"
 #include "InventoryManagement/Utils/Inv_InventoryStatics.h"
 #include "Items/Inv_InventoryItem.h"
+#include "Items/Components/Inv_ItemComponent.h"
+#include "Items/Fragments/Inv_FragmentTags.h"
+#include "Items/Fragments/Inv_ItemFragment.h"
 #include "Widgets/Inventory/GridSlots/Inv_GridSlot.h"
 #include "Widgets/Utils/Inv_WidgetUtils.h"
 
@@ -21,11 +24,50 @@ void UInv_InventoryGrid::NativeOnInitialized()
 	InventoryComponent->OnItemAdded.AddDynamic(this, &UInv_InventoryGrid::AddItem);
 }
 
+FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const UInv_ItemComponent* ItemComponent)
+{
+	return HasRoomForItem(ItemComponent->GetItemManifest());
+}
+
+FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const UInv_InventoryItem* InventoryItem)
+{
+	return HasRoomForItem(InventoryItem->GetItemManifest());
+}
+
+FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const FInv_ItemManifest& Manifest)
+{
+	FInv_SlotAvailabilityResult Result;
+	Result.TotalRoomToFill = 1;
+	
+	FInv_SlotAvailability SlotAvailability;
+	SlotAvailability.AmountToFill = 1;
+	SlotAvailability.Index = 0;
+	Result.SlotAvailabilities.Add(MoveTemp(SlotAvailability));
+	
+	return Result;
+}
+
 void UInv_InventoryGrid::AddItem(UInv_InventoryItem* InventoryItem)
 {
 	if (!MatchesCategory(InventoryItem)) return;
 	
-	UE_LOG(LogTemp, Warning, TEXT("InventoryGrid::AddItem"));
+	FInv_SlotAvailabilityResult Result = HasRoomForItem(InventoryItem);
+	
+	AddItemToIndices(Result, InventoryItem);
+}
+
+void UInv_InventoryGrid::AddItemToIndices(const FInv_SlotAvailabilityResult& Result,
+	UInv_InventoryItem* NewInventoryItem)
+{
+	// Get Grid Fragment so we know how many grid spaces the item takes
+	const FInv_GridFragment* GridFragment = GetFragment<FInv_GridFragment>(NewInventoryItem, FragmentTags::GridFragment);
+	// Get Image Fragment so we have the icon to display
+	const FInv_ImageFragment* ImageFragment = GetFragment<FInv_ImageFragment>(NewInventoryItem, FragmentTags::IconFragment);
+	if (!GridFragment || !ImageFragment) return;
+	
+	
+	// Create widget to add to the grid
+	// Store the new widget in a container
 }
 
 void UInv_InventoryGrid::ConstructGrid()
@@ -49,6 +91,8 @@ void UInv_InventoryGrid::ConstructGrid()
 		}
 	}
 }
+
+
 
 bool UInv_InventoryGrid::MatchesCategory(const UInv_InventoryItem* InventoryItem) const
 {
