@@ -66,21 +66,74 @@ FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const UInv_Invent
 	return HasRoomForItem(InventoryItem->GetItemManifest());
 }
 
+bool UInv_InventoryGrid::HasRoomAtIndex(const UInv_GridSlot* GridSlot, const FIntPoint& Dimensions, const TSet<int32>& OccupiedIndices, TSet<int32>& TentativelyOccupiedIndices)
+{
+	bool bHasRoomAtIndex = true;
+	// Is there room at this index? (i.e., are there other items in the way?)
+	UInv_InventoryStatics::ForEach2D(GridSlots, GridSlot->GetTileIndex(), Dimensions, Columns, 
+		[&](const UInv_GridSlot* SubGridSlot)
+		{
+			if (CheckSlotConstrains(GridSlot, SubGridSlot, OccupiedIndices))
+			{
+				TentativelyOccupiedIndices.Add(SubGridSlot->GetTileIndex());
+			}
+			else
+			{
+				bHasRoomAtIndex = false;
+			}
+		});
+	
+	return bHasRoomAtIndex;
+}
+
+bool UInv_InventoryGrid::CheckSlotConstrains(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot, const TSet<int32>& OccupiedIndices)
+{
+	// Index claimed? 
+	if (OccupiedIndices.Contains(SubGridSlot->GetTileIndex())) return false;
+	// Has valid item?
+	if (!SubGridSlot->GetInventoryItem().IsValid()) return true;
+	// Is this Grid slot an upper left slot?
+	if (SubGridSlot->GetUpperLeftIndex() != GridSlot->GetTileIndex()) return false;
+	// Is this item the same type as the item we're trying to add?
+	// If so, is this a stackable item?
+	// If stackable, is this slot at max stack size already?
+	return false;
+}
+
 FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const FInv_ItemManifest& Manifest)
 {
 	FInv_SlotAvailabilityResult Result;
-	Result.TotalRoomToFill = 7;
-	Result.bStackable = true;
+	// Determine if the item is stackable
+	const FInv_StackableFragment* StackableFragment = Manifest.GetFragmentOfType<FInv_StackableFragment>();
+	Result.bStackable = StackableFragment != nullptr;
 	
-	FInv_SlotAvailability SlotAvailability;
-	SlotAvailability.AmountToFill = 2;
-	SlotAvailability.Index = 0;
-	Result.SlotAvailabilities.Add(MoveTemp(SlotAvailability));
+	// Determine how many stacks to add
+	const int32 MaxStackSize = Result.bStackable ? StackableFragment->GetMaxStackSize() : 1;
+	int32 AmountToFill = Result.bStackable ? StackableFragment->GetStackCount() : 1;
 	
-	FInv_SlotAvailability SlotAvailability2;
-	SlotAvailability2.AmountToFill = 5;
-	SlotAvailability2.Index = 1;
-	Result.SlotAvailabilities.Add(MoveTemp(SlotAvailability2));
+	TSet<int32> OccupiedIndices;
+	// For each Grid slot:
+	for (const TObjectPtr<UInv_GridSlot>& GridSlot : GridSlots)
+	{
+		// If we don't have anymore to fill, break out loop early
+		if (AmountToFill == 0) break;
+		
+		// Is this index claimed yet?
+		if (OccupiedIndices.Contains(GridSlot->GetTileIndex())) continue;
+		
+		// Can the item fit here? (i.e., is it out of grid bounds?)
+		const FInv_GridFragment* GridFragment = Manifest.GetFragmentOfType<FInv_GridFragment>();
+		const FIntPoint Dimensions = GridFragment ? GridFragment->GetGridSize() : FIntPoint(1, 1);
+		TSet<int32> TentativeOccupiedIndices;
+		if (!HasRoomAtIndex(GridSlot, Dimensions, OccupiedIndices, TentativeOccupiedIndices)) continue;
+		OccupiedIndices.Append(TentativeOccupiedIndices);
+		
+		
+		// How much to fill?
+		// Update the amount left to fill
+	}
+		
+	// How much is the Remainder?
 	
 	return Result;
 }
@@ -183,4 +236,3 @@ void UInv_InventoryGrid::UpdateGridSlots(UInv_InventoryItem* NewInventoryItem, c
 		GridSlot->SetAvailable(false);
 	});
 }
-

@@ -52,6 +52,9 @@ private:
 	                                                 const int32 StackAmount) const;
 	void AddSlottedItemToCanvas(const int32 Index, const FInv_GridFragment* GridFragment, UInv_SlottedItem* SlottedItem) const;
 	void UpdateGridSlots(UInv_InventoryItem* NewInventoryItem, const int32 Index, bool bStackable, const int32 StackAmount);
+	bool HasRoomAtIndex(const UInv_GridSlot* GridSlot, const FIntPoint& Dimensions, const TSet<int32>& OccupiedIndices,
+	                    TSet<int32>& TentativelyOccupiedIndices);
+	bool CheckSlotConstrains(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot, const TSet<int32>& OccupiedIndices);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category="Inventory")
 	EInv_ItemCategory ItemCategory;
