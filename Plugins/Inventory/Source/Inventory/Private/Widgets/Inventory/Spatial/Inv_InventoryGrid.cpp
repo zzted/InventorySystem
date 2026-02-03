@@ -51,8 +51,8 @@ void UInv_InventoryGrid::ConstructGrid()
 void UInv_InventoryGrid::AddItem(UInv_InventoryItem* InventoryItem)
 {
 	if (!MatchesCategory(InventoryItem)) return;
-	
-	FInv_SlotAvailabilityResult Result = HasRoomForItem(InventoryItem);
+
+	const FInv_SlotAvailabilityResult Result = HasRoomForItem(InventoryItem);
 	
 	AddItemToIndices(Result, InventoryItem);
 }
@@ -175,7 +175,7 @@ bool UInv_InventoryGrid::CheckSlotConstrains(const UInv_GridSlot* GridSlot, cons
 	// Is this Grid slot an upper left slot?
 	if (SubGridSlot->GetUpperLeftIndex() != GridSlot->GetTileIndex()) return false;
 	// If so, is this a stackable item?
-	if (SubGridSlot->GetInventoryItem().Get()->IsStackable()) return false;
+	if (!SubGridSlot->GetInventoryItem().Get()->IsStackable()) return false;
 	// Is this item the same type as the item we're trying to add?
 	if (!SubGridSlot->GetInventoryItem().Get()->GetItemManifest().GetItemType().MatchesTagExact(ItemType)) return false;
 	// If stackable, is this slot at max stack size already?
