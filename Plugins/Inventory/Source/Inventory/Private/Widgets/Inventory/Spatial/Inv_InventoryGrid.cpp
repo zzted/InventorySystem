@@ -13,6 +13,7 @@
 #include "Items/Fragments/Inv_FragmentTags.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
 #include "Widgets/Inventory/GridSlots/Inv_GridSlot.h"
+#include "Widgets/Inventory/HoverItem/Inv_HoverItem.h"
 #include "Widgets/Inventory/SlottedItems/Inv_SlottedItem.h"
 #include "Widgets/Utils/Inv_WidgetUtils.h"
 
@@ -23,6 +24,7 @@ void UInv_InventoryGrid::NativeOnInitialized()
 	
 	InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
 	InventoryComponent->OnItemAdded.AddDynamic(this, &UInv_InventoryGrid::AddItem);
+	InventoryComponent->OnStackChange.AddDynamic(this, &UInv_InventoryGrid::AddStacks);
 }
 
 void UInv_InventoryGrid::ConstructGrid()
@@ -56,6 +58,8 @@ void UInv_InventoryGrid::AddItem(UInv_InventoryItem* InventoryItem)
 	
 	AddItemToIndices(Result, InventoryItem);
 }
+
+
 
 FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const UInv_ItemComponent* ItemComponent)
 {
@@ -142,6 +146,29 @@ int32 UInv_InventoryGrid::DetermineFillAmountForSlot(const bool bStackable, cons
 	return bStackable ? FMath::Min(AmountToFill, RoomInSlot) : 1;
 }
 
+void UInv_InventoryGrid::AddStacks(const FInv_SlotAvailabilityResult& Result)
+{
+	if (!MatchesCategory(Result.Item.Get())) return;
+	
+	for (const FInv_SlotAvailability& SlotAvailability : Result.SlotAvailabilities)
+	{
+		if (SlotAvailability.bItemAtIndex)
+		{
+			const TObjectPtr<UInv_GridSlot>& GridSlot = GridSlots[SlotAvailability.Index];
+			const TObjectPtr<UInv_SlottedItem>& SlottedItem = SlottedItems.FindChecked(SlotAvailability.Index);
+			// Slotted item only control the item widget
+			SlottedItem->SetStackCount(GridSlot->GetStackCount() + SlotAvailability.AmountToFill);
+			// GridSlot is the slot widget item seats in, has the stack count info in it
+			GridSlot->SetStackCount(GridSlot->GetStackCount() + SlotAvailability.AmountToFill);
+		}
+		else
+		{
+			AddItemAtIndex(Result.Item.Get(), SlotAvailability.Index, Result.bStackable, SlotAvailability.AmountToFill);
+			UpdateGridSlots(Result.Item.Get(), SlotAvailability.Index, Result.bStackable, SlotAvailability.AmountToFill);
+		}
+	}
+}
+
 bool UInv_InventoryGrid::HasRoomAtIndex(const UInv_GridSlot* GridSlot, const FIntPoint& Dimensions, 
                                         const TSet<int32>& OccupiedIndices, TSet<int32>& TentativelyOccupiedIndices, 
                                         const FGameplayTag& ItemType, const int32 MaxStackSize)
@@ -224,7 +251,63 @@ UInv_SlottedItem* UInv_InventoryGrid::CreateSlottedItem(UInv_InventoryItem* NewI
 	SlottedItem->SetIsStackable(bStackable);
 	const int32 StackCount = bStackable ? StackAmount : 0;
 	SlottedItem->SetStackCount(StackCount);
+	SlottedItem->OnSlottedItemClicked.AddDynamic(this, &ThisClass::OnSlottedItemClicked);
 	return SlottedItem;
+}
+
+
+
+void UInv_InventoryGrid::OnSlottedItemClicked(int32 GridIndex, const FPointerEvent& MouseEvent)
+{
+	check(GridSlots.IsValidIndex(GridIndex));
+	UInv_InventoryItem* ClickedInventoryItem = GridSlots[GridIndex]->GetInventoryItem().Get();
+	if (!IsValid(HoverItem) && MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		CreateHoverItemWidget(GridIndex, ClickedInventoryItem);
+		RemoveItemFromGrid(GridIndex, ClickedInventoryItem);
+	}
+}
+
+void UInv_InventoryGrid::CreateHoverItemWidget(int32 GridIndex, UInv_InventoryItem* ClickedInventoryItem)
+{
+	// Pickup Item - Assign the hover item and remove the slotted item from the grid.
+	const FInv_GridFragment* GridFragment = GetFragment<FInv_GridFragment>(ClickedInventoryItem, FragmentTags::GridFragment);
+	const FInv_ImageFragment* ImageFragment = GetFragment<FInv_ImageFragment>(ClickedInventoryItem, FragmentTags::IconFragment);
+	if (!GridFragment || !ImageFragment) return;
+	HoverItem = CreateWidget<UInv_HoverItem>(GetOwningPlayer(), HoverItemClass);
+	FSlateBrush IconBrush;
+	IconBrush.SetResourceObject(ImageFragment->GetIcon());
+	IconBrush.DrawAs = ESlateBrushDrawType::Image;
+	IconBrush.ImageSize = GetDrawSize(GridFragment) * UWidgetLayoutLibrary::GetViewportScale(this); // Scale draw size in case the viewport is in a bad scale
+	HoverItem->SetImageBrush(IconBrush);
+	HoverItem->SetGridDimensions(GridFragment->GetGridSize());
+	HoverItem->SetInventoryItem(ClickedInventoryItem);
+	HoverItem->SetIsStackable(ClickedInventoryItem->IsStackable());
+	HoverItem->SetPreviousGridIndex(GridIndex);
+	HoverItem->SetStackCount(HoverItem->IsStackable() ? GridSlots[GridIndex]->GetStackCount() : 0);
+		
+	GetOwningPlayer()->SetMouseCursorWidget(EMouseCursor::Default, HoverItem);
+}
+
+void UInv_InventoryGrid::RemoveItemFromGrid(int32 GridIndex, UInv_InventoryItem* ClickedInventoryItem)
+{
+	const FInv_GridFragment* GridFragment = GetFragment<FInv_GridFragment>(ClickedInventoryItem, FragmentTags::GridFragment);
+	if (!GridFragment) return;
+	UInv_InventoryStatics::ForEach2D(GridSlots, GridIndex, GridFragment->GetGridSize(), Columns, [&](UInv_GridSlot* GridSlot)
+	{
+		GridSlot->SetInventoryItem(nullptr);
+		GridSlot->SetUpperLeftIndex(INDEX_NONE);
+		GridSlot->SetUnoccupiedTexture();
+		GridSlot->SetAvailable(true);
+		GridSlot->SetStackCount(0);
+	});
+	
+	if (SlottedItems.Contains(GridIndex))
+	{
+		TObjectPtr<UInv_SlottedItem> FoundSlottedItem;
+		SlottedItems.RemoveAndCopyValue(GridIndex, FoundSlottedItem);
+		FoundSlottedItem->RemoveFromParent();
+	}
 }
 
 void UInv_InventoryGrid::AddSlottedItemToCanvas(const int32 Index, const FInv_GridFragment* GridFragment,

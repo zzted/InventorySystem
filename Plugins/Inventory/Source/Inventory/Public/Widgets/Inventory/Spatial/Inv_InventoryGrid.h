@@ -7,6 +7,7 @@
 #include "Types/Inv_GridTypes.h"
 #include "Inv_InventoryGrid.generated.h"
 
+class UInv_HoverItem;
 struct FGameplayTag;
 struct FInv_ImageFragment;
 struct FInv_GridFragment;
@@ -32,6 +33,9 @@ public:
 	
 	UFUNCTION()
 	void AddItem(UInv_InventoryItem* InventoryItem);
+	
+	UFUNCTION()
+	void OnSlottedItemClicked(int32 GridIndex, const FPointerEvent& MouseEvent);
 
 private:
 	
@@ -51,6 +55,7 @@ private:
 	                                                 const FInv_ImageFragment* ImageFragment, 
 	                                                 const bool bStackable, 
 	                                                 const int32 StackAmount) const;
+	
 	void AddSlottedItemToCanvas(const int32 Index, const FInv_GridFragment* GridFragment, UInv_SlottedItem* SlottedItem) const;
 	void UpdateGridSlots(UInv_InventoryItem* NewInventoryItem, const int32 Index, bool bStackable, const int32 StackAmount);
 	bool HasRoomAtIndex(const UInv_GridSlot* GridSlot, const FIntPoint& Dimensions, const TSet<int32>& OccupiedIndices,
@@ -58,6 +63,11 @@ private:
 	bool CheckSlotConstrains(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot, const TSet<int32>& OccupiedIndices, const FGameplayTag& ItemType, const int32 MaxStackSize);
 	bool IsInGridBounds(const int32 StartIndex, const FIntPoint& ItemDimensions) const;
 	int32 DetermineFillAmountForSlot(const bool bStackable, const int32 MaxStackSize, const int32 AmountToFill, const UInv_GridSlot* GridSlot);
+	void CreateHoverItemWidget(int32 GridIndex, UInv_InventoryItem* ClickedInventoryItem);
+	void RemoveItemFromGrid(int32 GridIndex, UInv_InventoryItem* ClickedInventoryItem);
+	
+	UFUNCTION()
+	void AddStacks(const FInv_SlotAvailabilityResult& Result);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category="Inventory")
 	EInv_ItemCategory ItemCategory;
@@ -85,4 +95,10 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category="Inventory")
 	float TileSize;
+	
+	UPROPERTY(EditAnywhere, Category="Inventory")
+	TSubclassOf<UInv_HoverItem> HoverItemClass;
+	
+	UPROPERTY()
+	TObjectPtr<UInv_HoverItem> HoverItem;
 };

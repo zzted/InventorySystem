@@ -3,10 +3,12 @@
 
 #include "InventoryManagement/Components/Inv_InventoryComponent.h"
 
+#include "IDetailTreeNode.h"
 #include "Items/Components/Inv_ItemComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Widgets/Inventory/InventoryBase/Inv_InventoryBase.h"
 #include "Items/Inv_InventoryItem.h"
+#include "Items/Fragments/Inv_ItemFragment.h"
 
 
 UInv_InventoryComponent::UInv_InventoryComponent() : InventoryList(this)
@@ -39,8 +41,9 @@ void UInv_InventoryComponent::TryAddItem(UInv_ItemComponent* ItemComponent)
 	
 	if (Result.Item.IsValid() && Result.bStackable)
 	{
-		// Add stacks to an item that already exists in the inventory, we only want to update the stack count, 
+		// Add stacks to an item that already exists in the inventory; we only want to update the stack count, 
 		// not create a new time of this type.
+		OnStackChange.Broadcast(Result);
 		Server_AddStacksToItem(ItemComponent, Result.TotalRoomToFill, Result.Remainder);
 		
 	}
@@ -51,9 +54,10 @@ void UInv_InventoryComponent::TryAddItem(UInv_ItemComponent* ItemComponent)
 	}
 }
 
-void UInv_InventoryComponent::Server_AddNewItem_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount)
+void UInv_InventoryComponent::Server_AddNewItem_Implementation(UInv_ItemComponent* ItemComponent, const int32 InStackCount)
 {
 	UInv_InventoryItem* NewItem = InventoryList.AddEntry(ItemComponent);
+	NewItem->SetTotalStackCount(InStackCount);
 	
 	if (GetOwner()->GetNetMode() == NM_ListenServer || GetOwner()->GetNetMode() == NM_Standalone)
 	{
@@ -62,12 +66,28 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(UInv_ItemComponen
 	}
 	
 	// Tell the Item Component to destroy its owning actor.
+	ItemComponent->Pickup();
 }
 
-void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount,
-	int32 Remainder)
+void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(UInv_ItemComponent* ItemComponent, const int32 InStackCount,
+	const int32 Remainder)
 {
+	const FGameplayTag ItemType = IsValid(ItemComponent) ? ItemComponent->GetItemManifest().GetItemType() : FGameplayTag::EmptyTag;
+	UInv_InventoryItem* InventoryItem = InventoryList.FindFirstItemByType(ItemType);
+	if (!IsValid(InventoryItem)) return;
+	InventoryItem->SetTotalStackCount(InventoryItem->GetTotalStackCount() + InStackCount);
 	
+	// Destroy the item if the remainder is zero
+	if (Remainder <= 0)
+	{
+		ItemComponent->Pickup();
+	}
+	else if (FInv_StackableFragment* StackableFragment = ItemComponent->GetItemManifest().GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	{
+		StackableFragment->SetStackCount(Remainder);
+	}
+	
+	// Update stack count for the item pickup
 }
 
 void UInv_InventoryComponent::ToggleInventoryMenu()

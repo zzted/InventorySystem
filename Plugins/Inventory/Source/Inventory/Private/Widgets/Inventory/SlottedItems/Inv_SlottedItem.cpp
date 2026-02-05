@@ -7,6 +7,13 @@
 #include "Components/TextBlock.h"
 #include "Items/Inv_InventoryItem.h" // Required because the Inventory is a weak pointer
 
+FReply UInv_SlottedItem::NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	OnSlottedItemClicked.Broadcast(GridIndex, MouseEvent);
+	
+	return FReply::Handled();
+}
+
 void UInv_SlottedItem::SetInventoryItem(UInv_InventoryItem* Item)
 {
 	InventoryItem = Item;
