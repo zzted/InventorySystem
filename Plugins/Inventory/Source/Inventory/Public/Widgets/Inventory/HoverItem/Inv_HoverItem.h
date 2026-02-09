@@ -19,7 +19,7 @@ class INVENTORY_API UInv_HoverItem : public UUserWidget
 	GENERATED_BODY()
 public:
 	void SetImageBrush(const FSlateBrush& Brush) const;
-	void SetStackCount(const int32 StackCount) const;
+	void SetStackCount(const int32 Count);
 	
 	FGameplayTag GetItemType() const;
 	int32 GetStackCount() const { return PreviousStackCount; }
@@ -39,9 +39,9 @@ private:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> Text_StackCount;
 	
+	bool bIsStackable = false;
 	int32 PreviousGridIndex = -1;
+	int32 PreviousStackCount = 0;
 	FIntPoint GridDimensions;
 	TWeakObjectPtr<UInv_InventoryItem> InventoryItem;
-	bool bIsStackable = false;
-	int32 PreviousStackCount = 0;
 };

@@ -12,11 +12,12 @@ void UInv_HoverItem::SetImageBrush(const FSlateBrush& Brush) const
 	Image_Icon->SetBrush(Brush);
 }
 
-void UInv_HoverItem::SetStackCount(const int32 StackCount) const
+void UInv_HoverItem::SetStackCount(const int32 Count)
 {
-	if (StackCount > 0)
+	PreviousStackCount = Count;
+	if (Count > 0)
 	{
-		Text_StackCount->SetText(FText::AsNumber(StackCount));
+		Text_StackCount->SetText(FText::AsNumber(Count));
 		Text_StackCount->SetVisibility(ESlateVisibility::Visible);
 	} 
 	else

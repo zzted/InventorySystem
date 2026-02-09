@@ -32,6 +32,8 @@ public:
 	EInv_ItemCategory GetItemCategory() const {return ItemCategory;}
 	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_ItemComponent* ItemComponent);
 	
+	void ShowCursor();
+	void HideCursor();
 	
 	UFUNCTION()
 	void AddItem(UInv_InventoryItem* InventoryItem);
@@ -45,6 +47,15 @@ private:
 	
 	void ConstructGrid();
 	bool MatchesCategory(const UInv_InventoryItem* InventoryItem) const;
+	
+	UFUNCTION()
+	void OnGridSlotClicked(int32 GridIndex, const FPointerEvent& MouseEvent);
+	
+	UFUNCTION()
+	void OnGridSlotHovered(int32 GridIndex, const FPointerEvent& MouseEvent);
+	
+	UFUNCTION()
+	void OnGridSlotUnhovered(int32 GridIndex, const FPointerEvent& MouseEvent);
 	
 	/* Add Stack to Existing Slot */
 	UFUNCTION()
@@ -73,7 +84,7 @@ private:
 	int32 DetermineFillAmountForSlot(const bool bStackable, const int32 MaxStackSize, const int32 AmountToFill, const UInv_GridSlot* GridSlot);
 	
 	/* Hover Item */
-	void CreateHoverItemWidget(int32 GridIndex, UInv_InventoryItem* ClickedInventoryItem);
+	void CreateHoverItemWidget(int32 PrevGridIndex, UInv_InventoryItem* ClickedInventoryItem);
 	void RemoveItemFromGrid(int32 GridIndex, const UInv_InventoryItem* ClickedInventoryItem);
 	void UpdateTileParameters(const FVector2D& CanvasPosition, const FVector2D& MousePosition);
 	EInv_TileQuadrant CalculateTileQuadrant(const FVector2D& CanvasPosition, const FVector2D& MousePosition);
@@ -85,7 +96,30 @@ private:
 	void UnhighlightSlots(const int32 Index, const FIntPoint& Dimensions);
 	void ChangeHoverHighlightType(const int32 Index, const FIntPoint& Dimensions, EInv_GridSlotState GridSlotState);
 	
+	/* Put Down Hover Item*/
+	void ClearHoverItem();
+	bool IsSameStackable(const UInv_InventoryItem* ClickedInventoryItem) const;
+	void SwapWithHoverItem(int32 GridIndex, UInv_InventoryItem* ClickedInventoryItem);
+	void SwapStackCounts(const int32 GridIndex, const int32 ClickedStackCount, const int32 HoverStackCount);
+	void ConsumeHoverItemStack(const int32 GridIndex, const int32 ClickedStackCount, const int32 HoverStackCount);
+	void FillInStack(const int32 GridIndex, const int32 FillAmount, const int32 Remainder);
 	
+	/* Cursor */
+	UUserWidget* GetVisibleCursorWidget();
+	UUserWidget* GetHiddenCursorWidget();
+	
+	
+	UPROPERTY(EditAnywhere, Category="Inventory")
+	TSubclassOf<UUserWidget> VisibleCursorWidgetClass;
+	
+	UPROPERTY(EditAnywhere, Category="Inventory")
+	TSubclassOf<UUserWidget> HiddenCursorWidgetClass;
+	
+	UPROPERTY()
+	TObjectPtr<UUserWidget> VisibleCursorWidget;
+	
+	UPROPERTY()
+	TObjectPtr<UUserWidget> HiddenCursorWidget;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category="Inventory")
 	EInv_ItemCategory ItemCategory;
