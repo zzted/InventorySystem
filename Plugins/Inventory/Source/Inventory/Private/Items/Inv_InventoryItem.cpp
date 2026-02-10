@@ -20,6 +20,11 @@ void UInv_InventoryItem::SetItemManifest(const FInv_ItemManifest& Manifest)
 	ItemManifest = FInstancedStruct::Make<FInv_ItemManifest>(Manifest);
 }
 
+bool UInv_InventoryItem::IsConsumable() const
+{
+	return GetItemManifest().GetItemCategory() == EInv_ItemCategory::Consumable;
+}
+
 bool UInv_InventoryItem::IsStackable() const
 {
 	const FInv_StackableFragment* StackableFragment = GetFragment<FInv_StackableFragment>(
