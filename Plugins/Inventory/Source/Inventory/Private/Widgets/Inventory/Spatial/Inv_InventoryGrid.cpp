@@ -3,7 +3,6 @@
 
 #include "Widgets/Inventory/Spatial/Inv_InventoryGrid.h"
 
-#include "InputState.h"
 #include "Inventory.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/CanvasPanel.h"
@@ -187,6 +186,11 @@ void UInv_InventoryGrid::OnPopUpMenuSplit(int32 SplitAmount, int32 GridIndex)
 
 void UInv_InventoryGrid::OnPopUpMenuDrop(int32 GridIndex)
 {
+	UInv_InventoryItem* InventoryItem = GridSlots[GridIndex]->GetInventoryItem().Get();
+	if (!IsValid(InventoryItem)) return;
+	CreateHoverItemWidget(GridIndex, InventoryItem);
+	RemoveItemFromGrid(GridIndex, InventoryItem);
+	DropItem();
 }
 
 void UInv_InventoryGrid::OnPopUpMenuConsume(int32 GridIndex)
@@ -678,6 +682,17 @@ void UInv_InventoryGrid::CreateItemPopUp(const int32 GridIndex)
 	{
 		ItemPopUp->CollapseConsumeButton();
 	}
+}
+
+void UInv_InventoryGrid::DropItem()
+{
+	if (!IsValid(HoverItem)) return;
+	if (!IsValid(HoverItem->GetInventoryItem())) return;
+	
+	// Tell the server to actually drop the item
+	InventoryComponent->Server_DropItem(HoverItem->GetInventoryItem(), HoverItem->GetStackCount());
+	
+	ClearHoverItem();
 }
 
 

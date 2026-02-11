@@ -8,7 +8,9 @@
 #include "Net/UnrealNetwork.h"
 #include "Widgets/Inventory/InventoryBase/Inv_InventoryBase.h"
 #include "Items/Inv_InventoryItem.h"
+#include "Items/Fragments/Inv_FragmentTags.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
+#include "Kismet/GameplayStatics.h"
 
 
 UInv_InventoryComponent::UInv_InventoryComponent() : InventoryList(this)
@@ -88,6 +90,40 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(UInv_ItemCom
 	}
 	
 	// Update stack count for the item pickup
+}
+
+void UInv_InventoryComponent::Server_DropItem_Implementation(UInv_InventoryItem* Item, int32 StackCount)
+{
+	const int32 NewStackCount = Item->GetTotalStackCount() - StackCount;
+	if (NewStackCount <= 0)
+	{
+		InventoryList.RemoveEntry(Item);
+	}
+	else
+	{
+		Item->SetTotalStackCount(NewStackCount);
+	}
+	SpawnDroppedItem(Item, StackCount);
+}
+
+
+void UInv_InventoryComponent::SpawnDroppedItem(UInv_InventoryItem* Item, int32 StackCount)
+{
+	// Spawn dropped item in the level
+	const APawn* OwningPawn = OwningController->GetPawn();
+	FVector RotatedForward = OwningPawn->GetActorForwardVector();
+	RotatedForward = RotatedForward.RotateAngleAxis(FMath::FRandRange(DropSpawnAngleMin, DropSpawnAngleMax), FVector::UpVector);
+	FVector SpawnLocation = OwningPawn->GetActorLocation() + RotatedForward * FMath::FRandRange(DropSpawnDistanceMin, DropSpawnDistanceMax);
+	SpawnLocation.Z += RelativeSpawnElevation;
+	const FRotator SpawnRotation = FRotator::ZeroRotator;
+	
+	// Have the item manifest spawn the pickup actor
+	FInv_ItemManifest& ItemManifest = Item->GetItemManifestMutable();
+	if (FInv_StackableFragment* StackableFragment = ItemManifest.GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	{
+		StackableFragment->SetStackCount(StackCount); // Manifest stack count only takes effect when picking up
+	}
+	ItemManifest.SpawnPickupActor(this, SpawnLocation, SpawnRotation);
 }
 
 void UInv_InventoryComponent::ToggleInventoryMenu()

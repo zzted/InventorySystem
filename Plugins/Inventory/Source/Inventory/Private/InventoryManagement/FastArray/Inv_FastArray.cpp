@@ -46,7 +46,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 	UInv_InventoryComponent* IC = Cast<UInv_InventoryComponent>(OwnerComponent);
 	if (!IsValid(IC)) return nullptr;
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
-	NewEntry.Item = ItemComponent->GetItemManifest().Manifest(OwningActor); // Create new inventory item from IC manifest
+	NewEntry.Item = ItemComponent->GetItemManifest().Manifest(OwningActor); // Create a new inventory item from IC manifest
 	
 	IC->AddRepSubObject(NewEntry.Item);
 	MarkItemDirty(NewEntry);
@@ -58,7 +58,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_InventoryItem* Item)
 {
 	check(OwnerComponent);
 	AActor* OwningActor = OwnerComponent->GetOwner();
-	check(OwningActor->HasAuthority()); // Crash application is trying to perform action on client not server
+	check(OwningActor->HasAuthority()); // Crash application is trying to perform action on a client not server
 	
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.Item = Item;

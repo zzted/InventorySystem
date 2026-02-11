@@ -36,6 +36,7 @@ public:
 	void ShowCursor();
 	void HideCursor();
 	void SetOwningCanvasPanel(UCanvasPanel* OwningCanvas);
+	void DropItem();
 	
 	UFUNCTION()
 	void AddItem(UInv_InventoryItem* InventoryItem);
@@ -123,6 +124,7 @@ private:
 	
 	/* PopUp Menu */
 	void CreateItemPopUp(const int32 GridIndex);
+	
 	
 	
 	UPROPERTY(EditAnywhere, Category="Inventory")

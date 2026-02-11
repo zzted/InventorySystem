@@ -23,6 +23,13 @@ void UInv_SpatialInventory::NativeOnInitialized()
 	ShowEquippables();
 }
 
+FReply UInv_SpatialInventory::NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	// Mouse click on the current canvas panel will be considered outside the grid canvas since the later one is on top.
+	ActiveGrid->DropItem();
+	return FReply::Handled();
+}
+
 FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_ItemComponent* ItemComponent) const
 {
 	switch (UInv_InventoryStatics::GetItemCategoryFromItemComp(ItemComponent))
