@@ -22,6 +22,18 @@ bool UInv_WidgetUtils::IsWithinWidgetBounds(const FVector2D& Position, const FVe
 	return Location.X >= Position.X && Location.Y >= Position.Y && Location.X <= Position.X + Size.X && Location.Y <= Position.Y + Size.Y;
 }
 
+FVector2D UInv_WidgetUtils::GetClampedWidgetPosition(const FVector2D& Boundary, const FVector2D& WidgetSize,
+	const FVector2D& MousePosition)
+{
+	FVector2D ClampedPosition = MousePosition;
+	// Adjust horizontal pos to ensure that the widget stays within the boundary
+	if (MousePosition.X + WidgetSize.X > Boundary.X) ClampedPosition.X = Boundary.X - WidgetSize.X;
+	if (MousePosition.X < 0) ClampedPosition.X = 0;
+	if (MousePosition.Y + WidgetSize.Y > Boundary.Y) ClampedPosition.Y = Boundary.Y - WidgetSize.Y;
+	if (MousePosition.Y < 0) ClampedPosition.Y = 0;
+	return ClampedPosition;
+}
+
 FVector2D UInv_WidgetUtils::GetWidgetPosition(UWidget* Widget)
 {
 	const FGeometry Geometry = Widget->GetCachedGeometry();

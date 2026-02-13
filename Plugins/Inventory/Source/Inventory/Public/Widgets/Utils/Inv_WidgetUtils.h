@@ -20,6 +20,8 @@ public:
 	static FIntPoint GetPositionFromIndex(const int32 Index, const int32 Columns);
 	static bool IsWithinWidgetBounds(const FVector2D& Position, const FVector2D& Size, const FVector2D& Location);
 	
+	static FVector2D GetClampedWidgetPosition(const FVector2D& Boundary, const FVector2D& WidgetSize, const FVector2D& MousePosition);
+	
 	UFUNCTION(BlueprintCallable, Category="Inventory")
 	static FVector2D GetWidgetPosition(UWidget* Widget);
 	

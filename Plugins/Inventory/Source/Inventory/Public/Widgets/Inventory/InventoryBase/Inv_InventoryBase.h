@@ -21,4 +21,7 @@ public:
 	{
 		return FInv_SlotAvailabilityResult();
 	}
+	virtual void OnItemHovered(UInv_InventoryItem* Item) {}
+	virtual void OnItemUnhovered() {}
+	virtual bool HasHoverItem() const { return false; }
 };
