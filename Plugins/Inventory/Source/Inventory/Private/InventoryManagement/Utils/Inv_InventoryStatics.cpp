@@ -32,9 +32,25 @@ void UInv_InventoryStatics::ItemHovered(APlayerController* PlayerController, UIn
 
 void UInv_InventoryStatics::ItemUnhovered(APlayerController* PlayerController)
 {
-	UInv_InventoryComponent* InventoryComponent = GetInventoryComponent(PlayerController);
+	const UInv_InventoryComponent* InventoryComponent = GetInventoryComponent(PlayerController);
 	if (!IsValid(InventoryComponent)) return;
 	UInv_InventoryBase* InventoryBase = InventoryComponent->GetInventoryMenu();
 	if (!IsValid(InventoryBase)) return;
 	InventoryBase->OnItemUnhovered();
+}
+
+UInv_HoverItem* UInv_InventoryStatics::GetHoverItem(APlayerController* PlayerController)
+{
+	const UInv_InventoryComponent* InventoryComponent = GetInventoryComponent(PlayerController);
+	if (!IsValid(InventoryComponent)) return nullptr;
+	UInv_InventoryBase* InventoryBase = InventoryComponent->GetInventoryMenu();
+	if (!IsValid(InventoryBase)) return nullptr;
+	return InventoryBase->GetHoverItem();
+}
+
+UInv_InventoryBase* UInv_InventoryStatics::GetInventoryMenu(APlayerController* PlayerController)
+{
+	const UInv_InventoryComponent* InventoryComponent = GetInventoryComponent(PlayerController);
+	if (!IsValid(InventoryComponent)) return nullptr;
+	return InventoryComponent->GetInventoryMenu();
 }

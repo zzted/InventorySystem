@@ -38,6 +38,11 @@ public:
 	void SetOwningCanvasPanel(UCanvasPanel* OwningCanvas);
 	void DropItem();
 	bool HasHoverItem() const ;
+	UInv_HoverItem* GetHoverItem();
+	void ClearHoverItem();
+	float GetTileSize() const { return TileSize; }
+	void AssignHoverItem(UInv_InventoryItem* ClickedInventoryItem);
+	void OnHide();
 	
 	UFUNCTION()
 	void AddItem(UInv_InventoryItem* InventoryItem);
@@ -72,6 +77,9 @@ private:
 	UFUNCTION()
 	void OnPopUpMenuConsume(int32 GridIndex);
 	
+	UFUNCTION()
+	void OnInventoryMenuToggled(bool bIsOpen);
+	
 	/* Add Stack to Existing Slot */
 	UFUNCTION()
 	void AddStacks(const FInv_SlotAvailabilityResult& Result);
@@ -90,8 +98,8 @@ private:
 	void UpdateGridSlots(UInv_InventoryItem* NewInventoryItem, const int32 Index, bool bStackable, const int32 StackAmount);
 	
 	/* Check SlotAvailability */
-	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_InventoryItem* InventoryItem);
-	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest);
+	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_InventoryItem* InventoryItem, const int32 StackAmountOverride = -1);
+	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest, const int32 StackAmountOverride = -1);
 	bool HasRoomAtIndex(const UInv_GridSlot* GridSlot, const FIntPoint& Dimensions, const TSet<int32>& OccupiedIndices,
 	                    TSet<int32>& TentativelyOccupiedIndices, const FGameplayTag& ItemType, const int32 MaxStackSize);
 	bool CheckSlotConstrains(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot, const TSet<int32>& OccupiedIndices, const FGameplayTag& ItemType, const int32 MaxStackSize);
@@ -112,12 +120,13 @@ private:
 	void ChangeHoverHighlightType(const int32 Index, const FIntPoint& Dimensions, EInv_GridSlotState GridSlotState);
 	
 	/* Put Down Hover Item*/
-	void ClearHoverItem();
+
 	bool IsSameStackable(const UInv_InventoryItem* ClickedInventoryItem) const;
 	void SwapWithHoverItem(int32 GridIndex, UInv_InventoryItem* ClickedInventoryItem);
 	void SwapStackCounts(const int32 GridIndex, const int32 ClickedStackCount, const int32 HoverStackCount);
 	void ConsumeHoverItemStack(const int32 GridIndex, const int32 ClickedStackCount, const int32 HoverStackCount);
 	void FillInStack(const int32 GridIndex, const int32 FillAmount, const int32 Remainder);
+	void PutBackHoverItem();
 	
 	/* Cursor */
 	UUserWidget* GetVisibleCursorWidget();

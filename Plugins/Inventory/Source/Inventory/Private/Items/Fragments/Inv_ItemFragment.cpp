@@ -98,10 +98,56 @@ void FInv_HealthPotionFragment::OnConsume(APlayerController* PC)
 	// or get ASC and apply a Gameplay Effect
 	// or call and interface function for Healing()
 	
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Healed %f HP"), Value));
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, 
+		FString::Printf(TEXT("Healed %f HP"), Value));
 }
 
 void FInv_ManaPotionFragment::OnConsume(APlayerController* PC)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("Restored %f MANA"), Value));
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, 
+		FString::Printf(TEXT("Restored %f MANA"), Value));
+}
+
+void FInv_StrengthModifier::OnEquip(APlayerController* PC)
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, 
+		FString::Printf(TEXT("Strength increased by %f."), Value));
+}
+
+void FInv_StrengthModifier::OnUnequip(APlayerController* PC)
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, 
+		FString::Printf(TEXT("Strength decreased by %f."), Value));
+}
+
+void FInv_EquipmentFragment::OnEquip(APlayerController* PC)
+{
+	if (bEquipped) return;
+	bEquipped = true;
+	for (TInstancedStruct<FInv_EquipModifier>& Modifier : EquipModifiers)
+	{
+		FInv_EquipModifier& ModRef = Modifier.GetMutable();
+		ModRef.OnEquip(PC);
+	}
+}
+
+void FInv_EquipmentFragment::OnUnequip(APlayerController* PC)
+{
+	if (!bEquipped) return;
+	bEquipped = false;
+	for (TInstancedStruct<FInv_EquipModifier>& Modifier : EquipModifiers)
+	{
+		FInv_EquipModifier& ModRef = Modifier.GetMutable();
+		ModRef.OnUnequip(PC);
+	}
+}
+
+void FInv_EquipmentFragment::Assimilate(UInv_CompositeBase* Composite) const
+{
+	FInv_InventoryItemFragment::Assimilate(Composite);
+	for (const TInstancedStruct<FInv_EquipModifier>& Modifier : EquipModifiers)
+	{
+		const FInv_EquipModifier& ModRef = Modifier.Get();
+		ModRef.Assimilate(Composite);
+	}
 }

@@ -27,6 +27,7 @@ void UInv_InventoryGrid::NativeOnInitialized()
 	InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
 	InventoryComponent->OnItemAdded.AddDynamic(this, &UInv_InventoryGrid::AddItem);
 	InventoryComponent->OnStackChange.AddDynamic(this, &UInv_InventoryGrid::AddStacks);
+	InventoryComponent->OnInventoryMenuToggled.AddDynamic(this, &UInv_InventoryGrid::OnInventoryMenuToggled);
 }
 
 void UInv_InventoryGrid::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -209,6 +210,14 @@ void UInv_InventoryGrid::OnPopUpMenuConsume(int32 GridIndex)
 	if (NewStackCount <= 0)
 	{
 		RemoveItemFromGrid(UpperLeftIndex, InventoryItem);
+	}
+}
+
+void UInv_InventoryGrid::OnInventoryMenuToggled(bool bIsOpen)
+{
+	if (!bIsOpen)
+	{
+		PutBackHoverItem();
 	}
 }
 
@@ -417,12 +426,12 @@ FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const UInv_ItemCo
 	return HasRoomForItem(ItemComponent->GetItemManifest());
 }
 
-FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const UInv_InventoryItem* InventoryItem)
+FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const UInv_InventoryItem* InventoryItem, const int32 StackAmountOverride)
 {
-	return HasRoomForItem(InventoryItem->GetItemManifest());
+	return HasRoomForItem(InventoryItem->GetItemManifest(), StackAmountOverride);
 }
 
-FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const FInv_ItemManifest& Manifest)
+FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const FInv_ItemManifest& Manifest, const int32 StackAmountOverride)
 {
 	FInv_SlotAvailabilityResult Result;
 	// Determine if the item is stackable
@@ -432,6 +441,7 @@ FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const FInv_ItemMa
 	// Determine how many stacks to add
 	const int32 MaxStackSize = Result.bStackable ? StackableFragment->GetMaxStackSize() : 1;
 	int32 AmountToFill = Result.bStackable ? StackableFragment->GetStackCount() : 1;
+	if (StackAmountOverride != -1 && Result.bStackable) AmountToFill = StackAmountOverride;
 	
 	TSet<int32> OccupiedIndices;
 	// For each Grid slot:
@@ -657,8 +667,12 @@ void UInv_InventoryGrid::OnSlottedItemClicked(int32 GridIndex, const FPointerEve
 		}
 	}
 	
-	// Swap with the hover item.
-	SwapWithHoverItem(GridIndex, ClickedInventoryItem);
+	// Make sure we can swap with only one valid item
+	if (CurrentSpaceQueryResult.ValidItem.IsValid())
+	{
+		// Swap with the hover item.
+		SwapWithHoverItem(GridIndex, ClickedInventoryItem);
+	}
 }
 
 
@@ -716,6 +730,11 @@ bool UInv_InventoryGrid::HasHoverItem() const
 	return IsValid(HoverItem);
 }
 
+UInv_HoverItem* UInv_InventoryGrid::GetHoverItem()
+{
+	return HoverItem;
+}
+
 
 bool UInv_InventoryGrid::IsSameStackable(const UInv_InventoryItem* ClickedInventoryItem) const
 {
@@ -771,8 +790,28 @@ void UInv_InventoryGrid::FillInStack(const int32 GridIndex, const int32 FillAmou
 	HoverItem->SetStackCount(Remainder);
 }
 
+void UInv_InventoryGrid::PutBackHoverItem()
+{
+	if (!IsValid(HoverItem)) return;
+	// Hover Item doesn't have ItemManifest which HasRoomForItem requires to calculate stack count from, that's why we 
+	// create the stack count override
+	FInv_SlotAvailabilityResult Result = HasRoomForItem(HoverItem->GetInventoryItem(), HoverItem->GetStackCount());
+	Result.Item = HoverItem->GetInventoryItem();
+	
+	AddStacks(Result);
+	ClearHoverItem();
+}
+
 
 void UInv_InventoryGrid::CreateHoverItemWidget(const int32 PrevGridIndex, UInv_InventoryItem* ClickedInventoryItem)
+{
+	AssignHoverItem(ClickedInventoryItem);
+	
+	HoverItem->SetPreviousGridIndex(PrevGridIndex);
+	HoverItem->SetStackCount(HoverItem->IsStackable() ? GridSlots[PrevGridIndex]->GetStackCount() : 0);
+}
+
+void UInv_InventoryGrid::AssignHoverItem(UInv_InventoryItem* ClickedInventoryItem)
 {
 	// Pickup Item - Assign the hover item and remove the slotted item from the grid.
 	const FInv_GridFragment* GridFragment = GetFragment<FInv_GridFragment>(ClickedInventoryItem, FragmentTags::GridFragment);
@@ -790,10 +829,13 @@ void UInv_InventoryGrid::CreateHoverItemWidget(const int32 PrevGridIndex, UInv_I
 	HoverItem->SetGridDimensions(GridFragment->GetGridSize());
 	HoverItem->SetInventoryItem(ClickedInventoryItem);
 	HoverItem->SetIsStackable(ClickedInventoryItem->IsStackable());
-	HoverItem->SetPreviousGridIndex(PrevGridIndex);
-	HoverItem->SetStackCount(HoverItem->IsStackable() ? GridSlots[PrevGridIndex]->GetStackCount() : 0);
-		
+	
 	GetOwningPlayer()->SetMouseCursorWidget(EMouseCursor::Default, HoverItem);
+}
+
+void UInv_InventoryGrid::OnHide()
+{
+	PutBackHoverItem();
 }
 
 void UInv_InventoryGrid::RemoveItemFromGrid(const int32 GridIndex, const UInv_InventoryItem* ClickedInventoryItem)
@@ -861,8 +903,8 @@ bool UInv_InventoryGrid::MatchesCategory(const UInv_InventoryItem* InventoryItem
 
 FVector2D UInv_InventoryGrid::GetDrawSize(const FInv_GridFragment* GridFragment) const
 {
-	const float IconTileWidth = TileSize - GridFragment->GetGridPadding() * 2;
-	const FVector2D IconSize = GridFragment->GetGridSize() * IconTileWidth;
+	// const float IconTileWidth = TileSize - GridFragment->GetGridPadding() * 2;
+	const FVector2D IconSize = GridFragment->GetGridSize() * TileSize - GridFragment->GetGridPadding() * 2;
 	return IconSize;
 }
 
