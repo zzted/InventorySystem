@@ -59,7 +59,7 @@ void UInv_SpatialInventory::EquippedGridSlotClicked(UInv_EquippedGridSlot* Equip
 	
 	if (GetOwningPlayer()->GetNetMode() != ENetMode::NM_DedicatedServer)
 	{
-		InventoryComponent->OnItemUnequipped.Broadcast(GetHoverItem()->GetInventoryItem());
+		InventoryComponent->OnItemEquipped.Broadcast(GetHoverItem()->GetInventoryItem());
 	}
 	
 	// Clear the Hover Item

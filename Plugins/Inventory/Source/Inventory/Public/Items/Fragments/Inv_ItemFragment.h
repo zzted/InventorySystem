@@ -5,6 +5,7 @@
 #include "StructUtils/InstancedStruct.h"
 #include "Inv_ItemFragment.generated.h"
 
+class AInv_EquipActor;
 class UInv_CompositeBase;
 /**
  * Why we use FInstancedStruct instead of UCLASS for Item Fragments:
@@ -254,8 +255,25 @@ struct FInv_EquipmentFragment : public FInv_InventoryItemFragment
 	void OnEquip(APlayerController* PC);
 	void OnUnequip(APlayerController* PC);
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
+	virtual void Manifest() override;
+	
+	AInv_EquipActor* SpawnAttachedActor(USkeletalMeshComponent* AttachMesh) const;
+	void DestroyAttachedActor();
+	FGameplayTag GetEquipmentTypeTag() const { return EquipmentTypeTag; }
+	void SetEquippedActor(AInv_EquipActor* EquipActor);
 	
 private:
 	UPROPERTY(EditAnywhere, Category="Inventory", meta=(ExcludeBaseStruct))
 	TArray<TInstancedStruct<FInv_EquipModifier>> EquipModifiers;
+	
+	UPROPERTY(EditAnywhere, Category="Inventory")
+	TSubclassOf<AInv_EquipActor> EquipActorClass = nullptr;
+	
+	TWeakObjectPtr<AInv_EquipActor> EquippedActor = nullptr;
+	
+	UPROPERTY(EditAnywhere, Category="Inventory")
+	FName SocketAttachPoint = NAME_None;
+	
+	UPROPERTY(EditAnywhere, Category="Inventory")
+	FGameplayTag EquipmentTypeTag = FGameplayTag::EmptyTag;
 };

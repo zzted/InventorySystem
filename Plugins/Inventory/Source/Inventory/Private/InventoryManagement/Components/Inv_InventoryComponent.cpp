@@ -3,14 +3,11 @@
 
 #include "InventoryManagement/Components/Inv_InventoryComponent.h"
 
-#include "IDetailTreeNode.h"
 #include "Items/Components/Inv_ItemComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Widgets/Inventory/InventoryBase/Inv_InventoryBase.h"
 #include "Items/Inv_InventoryItem.h"
-#include "Items/Fragments/Inv_FragmentTags.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
-#include "Kismet/GameplayStatics.h"
 
 
 UInv_InventoryComponent::UInv_InventoryComponent() : InventoryList(this)
