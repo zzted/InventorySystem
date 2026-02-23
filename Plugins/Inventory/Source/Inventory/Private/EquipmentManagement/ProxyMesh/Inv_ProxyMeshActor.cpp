@@ -10,6 +10,10 @@
 AInv_ProxyMeshActor::AInv_ProxyMeshActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	
+	// Need also to uncheck run under one process in editor preference to run properly 
+	SetReplicates(false);
+	
 	RootComponent = CreateDefaultSubobject<USceneComponent>("Root");
 	
 	ProxyMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ProxyMesh");
@@ -23,6 +27,7 @@ AInv_ProxyMeshActor::AInv_ProxyMeshActor()
 void AInv_ProxyMeshActor::BeginPlay()
 {
 	Super::BeginPlay();
+	// Due to network initialization order, required references may not exist at BeginPlay, so we retry next tick.
 	DelayedInitializeOwner();
 }
 

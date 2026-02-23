@@ -33,7 +33,7 @@ public:
 	void TryAddItem(UInv_ItemComponent* ItemComponent);
 	
 	UFUNCTION(Server, Reliable)
-	void Server_AddNewItem(UInv_ItemComponent* ItemComponent, int32 InStackCount);
+	void Server_AddNewItem(UInv_ItemComponent* ItemComponent, int32 InStackCount, int32 Remainder);
 	
 	UFUNCTION(Server, Reliable)
 	void Server_AddStacksToItem(UInv_ItemComponent* ItemComponent, int32 InStackCount, int32 Remainder);
@@ -54,6 +54,7 @@ public:
 	void AddRepSubObject(UObject* SubObject);
 	void SpawnDroppedItem(UInv_InventoryItem* Item, int32 StackCount);
 	UInv_InventoryBase* GetInventoryMenu() const { return InventoryMenu; }
+	bool IsMenuOpen() const { return bInventoryMenuOpen; }
 	
 	FInventoryItemChange OnItemAdded;
 	FInventoryItemChange OnItemRemoved;

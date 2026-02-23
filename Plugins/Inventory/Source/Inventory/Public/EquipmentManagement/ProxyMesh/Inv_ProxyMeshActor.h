@@ -15,6 +15,8 @@ class INVENTORY_API AInv_ProxyMeshActor : public AActor
 
 public:
 	AInv_ProxyMeshActor();
+	
+	USkeletalMeshComponent* GetProxyMesh() const { return ProxyMesh; }
 
 protected:
 	virtual void BeginPlay() override;
